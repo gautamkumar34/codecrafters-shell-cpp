@@ -9,11 +9,23 @@ int main() {
 
   while(true){
     cout << "$ ";
-    string s;
+    string s,s1,s2;
     getline(cin,s);
+    for(int i =0;i<s.length();i++){
+      if(s[i]==' '){
+        s1 = s.substr(0,i);
+        s2 = s.substr(i+1,s.length()-1);
+        break;
+      }
+    }
     if(s == "exit")break;
     else{
-      cout<<s<<": command not found"<<endl;
+      if(s1=="echo"){
+        cout<<s2<<endl;
+      }
+      else{
+        cout<<s<<": command not found"<<endl;
+      }
     }
     continue;
   }
