@@ -7,9 +7,12 @@ int main() {
   cout << std::unitbuf;
   cerr << std::unitbuf;
 
-  // TODO: Uncomment the code below to pass the first stage
-  cout << "$ ";
-  string s;
-  getline(cin,s);
-  cout<<s<<": command not found"<<endl;
+  while(true){
+    cout << "$ ";
+    string s;
+    getline(cin,s);
+    cout<<s<<": command not found"<<endl;
+    continue;
+  }
 }
+  
