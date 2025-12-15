@@ -19,7 +19,7 @@ int main() {
       }
       else cout<< s.substr(5)<<": not found"<<endl;
     }
-    if(s.substr(0,4)=="echo"){
+    else if(s.substr(0,4)=="echo"){
       cout<<s.substr(5)<<endl;
     }
     else{
