@@ -22,6 +22,9 @@ int main() {
     if(s.substr(0,4)=="echo"){
       cout<<s.substr(5)<<endl;
     }
+    else{
+      cout<<s<<": command not found"<<endl;
+    }
     continue;
   }
 }
