@@ -9,7 +9,7 @@
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
-string get_path(string cmd) {
+void get_path(string cmd) {
     const char* path_env = getenv("PATH");
     if(path_env==nullptr){
       cout<<cmd<<": not found"<<endl;
@@ -48,10 +48,13 @@ int main() {
     
     if(s == "exit")break;
     if(s.substr(0,4)=="type"){
-      if(s.substr(5)=="type" || s.substr(5)=="echo" ||s.substr(5)=="exit"){
-        cout<< s.substr(5)<<" is a shell builtin"<<endl;
-      }
-      else cout<< s.substr(5)<<": not found"<<endl;
+      string cmd = s.substr(5);                                     
+      if(cmd=="type" || cmd=="echo" ||cmd=="exit"){                 
+        cout<< cmd<<" is a shell builtin"<<endl;                    
+      }                                                             
+      else {                                                        
+        get_path(cmd);                                              
+      }               
     }
     else if(s.substr(0,4)=="echo"){
       cout<<s.substr(5)<<endl;
