@@ -2,12 +2,12 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <experimental/filesystem>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <cstdlib>   // for getenv
 #include <unistd.h>  // for access()
 
 using namespace std;
-namespace fs = std::experimental::filesystem;
 
 void get_path(string cmd) {
     const char* path_env = getenv("PATH");
@@ -24,12 +24,16 @@ void get_path(string cmd) {
     while (getline(ss, directory, ':')) {
         if(directory.empty())continue;
 
-        fs::path full_path = fs::path(directory) /cmd;
-        if(fs::exists(full_path) && !fs::is_directory(full_path)){
-          if(access(full_path.c_str(),X_OK)==0){
-            cout<<cmd<<" is "<<full_path.string()<<endl;
-            return;
+        string full_path_str = directory + "/" + cmd;
+        struct stat file_stat;
+        if(stat(full_path_str.c_str(), &file_stat)==0){
+          if(S_ISREG(file_stat.st_mode)){
+            if(access(full_path_str.c_str(),X_OK)==0){
+              cout<<cmd<<" is "<<full_path_str<<endl;
+              return;
+            }
           }
+          
         }
     }
 
@@ -64,5 +68,6 @@ int main() {
     }
     continue;
   }
+
 }
   
