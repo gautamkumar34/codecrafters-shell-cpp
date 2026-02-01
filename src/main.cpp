@@ -9,10 +9,10 @@
 
 using namespace std;
 
-void get_path(string cmd) {
+string get_path(string task) {
     const char* path_env = getenv("PATH");
     if(path_env==nullptr){
-      cout<<cmd<<": not found"<<endl;
+      cout<<task<<": not found"<<endl;
       return;
     }
 
@@ -24,20 +24,29 @@ void get_path(string cmd) {
     while (getline(ss, directory, ':')) {
         if(directory.empty())continue;
 
-        string full_path_str = directory + "/" + cmd;
+        string full_path_str = directory + "/" + task;
         struct stat file_stat;
         if(stat(full_path_str.c_str(), &file_stat)==0){
           if(S_ISREG(file_stat.st_mode)){
             if(access(full_path_str.c_str(),X_OK)==0){
-              cout<<cmd<<" is "<<full_path_str<<endl;
-              return;
+              return full_path_str;
             }
           }
           
         }
     }
 
-    cout<<cmd<<": not found"<<endl;
+    return "";
+}
+
+vector<string>parse_s(string s){
+  vector<string>args;
+  stringstream ss(s);
+  string parts;
+  while(ss >>parts){
+    args.push_back(parts);
+  }
+  return args;
 }
 
 int main() {
@@ -50,24 +59,46 @@ int main() {
     string s;
     getline(cin,s);
     
-    if(s == "exit")break;
-    if(s.substr(0,4)=="type"){
-      string cmd = s.substr(5);                                     
-      if(cmd=="type" || cmd=="echo" ||cmd=="exit"){                 
+    vector<string> args = parse_s(s);
+    string cmd = args[0];
+
+    if(cmd == "exit")break;
+    if(cmd=="type"){
+      string task = args[1];                                     
+      if(task=="type" || task=="echo" ||task=="exit"){                 
         cout<< cmd<<" is a shell builtin"<<endl;                    
       }                                                             
       else {                                                        
-        get_path(cmd);                                              
+        get_path(task);                                              
       }               
     }
-    else if(s.substr(0,4)=="echo"){
+    else if(cmd=="echo"){
       cout<<s.substr(5)<<endl;
     }
     else{
-      cout<<s<<": command not found"<<endl;
+      string full_path = get_path(cmd) ;
+      if(!full_path.empty()){
+        pid_t pid = fork();
+        if(pid ==0){
+          vector<char*>c_args;
+          for(auto& a :args){
+            c_args.push_back(&a[0]);
+          }
+          c_args.push_back(nullptr);
+          execv(full_path.c_str(), c_args.data());
+          perror("execv");
+          exit(1);
+        }
+        else {
+          waitpid(pid , nullptr,0);
+        }
+      }
+      else{
+        cout<<cmd<<":not found"<<endl;
+      }
     }
     continue;
   }
-
+  return 0;
 }
   
