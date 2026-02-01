@@ -12,8 +12,7 @@ using namespace std;
 string get_path(string task) {
     const char* path_env = getenv("PATH");
     if(path_env==nullptr){
-      cout<<task<<": not found"<<endl;
-      return;
+      return "";
     }
 
     //split by delimiter
@@ -66,10 +65,14 @@ int main() {
     if(cmd=="type"){
       string task = args[1];                                     
       if(task=="type" || task=="echo" ||task=="exit"){                 
-        cout<< cmd<<" is a shell builtin"<<endl;                    
+        cout<<task<<" is a shell builtin"<<endl;                    
       }                                                             
-      else {                                                        
-        get_path(task);                                              
+      else {          
+        string full_path = get_path(task);
+        if(!full_path.empty()){
+          cout<<task<<" is "<<full_path<<endl;
+        }
+        else cout<<task<<": not found"<<endl;                                                                                         
       }               
     }
     else if(cmd=="echo"){
@@ -94,11 +97,12 @@ int main() {
         }
       }
       else{
-        cout<<cmd<<":not found"<<endl;
+        cout<<cmd<<": command not found"<<endl;
       }
     }
     continue;
   }
   return 0;
+
 }
   
