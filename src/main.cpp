@@ -66,7 +66,7 @@ int main() {
     if(cmd == "exit")break;
     if(cmd=="type"){
       string task = args[1];                                     
-      if(task=="type" || task=="echo" ||task=="exit" || task =="pwd"){                 
+      if(task=="type" || task=="echo" ||task=="exit" || task =="pwd" || task =="cd"){                 
         cout<<task<<" is a shell builtin"<<endl;                    
       }                                                             
       else {          
@@ -86,6 +86,25 @@ int main() {
         cout<<cwd<<endl;
       }
       else perror("pwd");
+    }
+    else if(cmd == "cd"){
+      if(args.size()<2){
+        const char* home = getenv("HOME");
+        if(home)chdir(home);
+      }
+      else{
+        string path = args[1];
+        if(path == "~"){
+          const char* home = getenv("HOME");
+          if(home){
+            path = string(home);
+          }
+        }
+
+        if(chdir(path.c_str())!= 0){
+          cout<<"cd: "<<path<<": No such file or directory"<<endl;
+        }
+      }
     }
     else{
       string full_path = get_path(cmd) ;
