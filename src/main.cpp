@@ -6,7 +6,8 @@
 #include <sys/wait.h>
 #include <dirent.h>
 #include <cstdlib>   // for getenv
-#include <unistd.h>  // for access()
+#include <unistd.h>   // for access()
+#include <limits.h>  
 
 using namespace std;
 
@@ -65,7 +66,7 @@ int main() {
     if(cmd == "exit")break;
     if(cmd=="type"){
       string task = args[1];                                     
-      if(task=="type" || task=="echo" ||task=="exit"){                 
+      if(task=="type" || task=="echo" ||task=="exit" || task =="pwd"){                 
         cout<<task<<" is a shell builtin"<<endl;                    
       }                                                             
       else {          
@@ -78,6 +79,13 @@ int main() {
     }
     else if(cmd=="echo"){
       cout<<s.substr(5)<<endl;
+    }
+    else if(cmd == "pwd"){
+      char cwd[PATH_MAX];
+      if(getcwd(cwd , sizeof(cwd)) != nullptr){
+        cout<<cwd<<endl;
+      }
+      else perror("pwd");
     }
     else{
       string full_path = get_path(cmd) ;
