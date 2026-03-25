@@ -42,13 +42,40 @@ string get_path(string task) {
 }
 
 vector<string>parse_s(string s){
-  vector<string>args;
-  stringstream ss(s);
-  string parts;
-  while(ss >>parts){
-    args.push_back(parts);
-  }
-  return args;
+   vector<string> args;
+    string curr;
+    bool in_sq = false; 
+    bool in_dq = false; 
+    bool in_token = false; 
+
+    for(size_t i=0;i<s.length();++i){
+        char c = s[i];
+        if(c =='\'' && !in_dq){
+            in_sq = !in_sq;    
+            in_token = true;   
+        }
+        else if(c == '"' && !in_sq){
+            in_dq = !in_dq;    
+            in_token = true;
+        }
+        else if(isspace(c) && !in_sq && !in_dq){
+          if(in_token){
+            args.push_back(curr);
+            curr.clear();
+            in_token = false;
+          }
+        }
+        else{
+          curr += c;
+          in_token = true;
+        }
+    }
+    
+    if(in_token){
+      args.push_back(curr);
+    }
+    
+    return args;
 }
 
 int main() {
