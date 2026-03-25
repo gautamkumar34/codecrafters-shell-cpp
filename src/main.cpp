@@ -8,6 +8,7 @@
 #include <cstdlib>   // for getenv
 #include <unistd.h>   // for access()
 #include <limits.h>  
+#include <fcntl.h>
 
 using namespace std;
 
@@ -58,10 +59,63 @@ int main() {
   while(true){
     cout << "$ ";
     string s;
-    getline(cin,s);
+    if(!getline(cin,s))break;;
     
-    vector<string> args = parse_s(s);
+    vector<string> raw_args = parse_s(s);
+
+    if(raw_args.empty())continue;
+    vector<string>args;
+    string file_in , file_out, file_err;
+    bool append_out = false, append_err = false;
+
+    for(size_t i = 0 ; i<raw_args.size();i++){
+      if(raw_args[i]=="<" && i+1 < raw_args.size()){
+        file_in = raw_args[++i];
+      }
+      else if((raw_args[i]==">" || raw_args[i]=="1>") && i+1 < raw_args.size()){
+        file_out = raw_args[++i];
+        append_out= false;
+      }
+      else if((raw_args[i]==">>" || raw_args[i]=="1>>") && i+1 < raw_args.size()){
+        file_out = raw_args[++i];
+        append_out= true;
+      }
+      else if(raw_args[i]=="2>" && i+1 < raw_args.size()){
+        file_err= raw_args[++i];
+        append_err = false;
+      }
+      else if(raw_args[i]=="2>>" && i+1 < raw_args.size()){
+        file_err= raw_args[++i];
+        append_err = true;
+      }
+      else{
+        args.push_back(raw_args[i]);
+      }
+    }
+    if(args.empty())continue;
     string cmd = args[0];
+
+    int saved_out= dup(STDOUT_FILENO);
+    int saved_err = dup(STDERR_FILENO);
+    int saved_in = dup(STDIN_FILENO);
+
+    if(!file_out.empty()){
+      int flags = O_WRONLY | O_CREAT | (append_out ? O_WRONLY : O_TRUNC);
+      int fd = open(file_out.c_str(), flags, 0644);
+      if(fd != -1){dup2(fd,STDOUT_FILENO); close(fd);}
+      else perror("open");
+    }
+    if(!file_err.empty()){
+      int flags = O_WRONLY | O_CREAT | (append_out ? O_WRONLY : O_TRUNC);
+      int fd = open(file_out.c_str(), flags, 0644);
+      if(fd != -1){dup2(fd,STDERR_FILENO); close(fd);}
+      else perror("open");
+    }
+    if(!file_in.empty()){
+      int fd = open(file_out.c_str(), O_RDONLY);
+      if(fd != -1){dup2(fd,STDIN_FILENO); close(fd);}
+      else perror("open");
+    }
 
     if(cmd == "exit")break;
     if(cmd=="type"){
@@ -128,7 +182,10 @@ int main() {
         cout<<cmd<<": command not found"<<endl;
       }
     }
-    continue;
+    dup2(saved_out, STDOUT_FILENO);
+    dup2(saved_err, STDERR_FILENO);
+    dup2(saved_in, STDIN_FILENO);
+    close(saved_out); close(saved_err); close(saved_in);
   }
   return 0;
 
