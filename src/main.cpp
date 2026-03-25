@@ -132,7 +132,12 @@ int main() {
       }               
     }
     else if(cmd=="echo"){
-      cout<<s.substr(5)<<endl;
+      for(size_t i = 1; i < args.size(); ++i){
+          cout << args[i];
+          if (i < args.size() - 1) cout << " ";
+      }
+      cout << "\n";
+          
     }
     else if(cmd == "pwd"){
       char cwd[PATH_MAX];
