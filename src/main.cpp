@@ -86,7 +86,7 @@ int main() {
   while(true){
     cout << "$ ";
     string s;
-    if(!getline(cin,s))break;;
+    if(!getline(cin,s))break;
     
     vector<string> raw_args = parse_s(s);
 
@@ -127,19 +127,19 @@ int main() {
     int saved_in = dup(STDIN_FILENO);
 
     if(!file_out.empty()){
-      int flags = O_WRONLY | O_CREAT | (append_out ? O_WRONLY : O_TRUNC);
+      int flags = O_WRONLY | O_CREAT | (append_out ? O_APPEND : O_TRUNC);
       int fd = open(file_out.c_str(), flags, 0644);
       if(fd != -1){dup2(fd,STDOUT_FILENO); close(fd);}
       else perror("open");
     }
     if(!file_err.empty()){
-      int flags = O_WRONLY | O_CREAT | (append_out ? O_WRONLY : O_TRUNC);
+      int flags = O_WRONLY | O_CREAT | (append_out ? O_APPEND : O_TRUNC);
       int fd = open(file_out.c_str(), flags, 0644);
       if(fd != -1){dup2(fd,STDERR_FILENO); close(fd);}
       else perror("open");
     }
     if(!file_in.empty()){
-      int fd = open(file_out.c_str(), O_RDONLY);
+      int fd = open(file_in.c_str(), O_RDONLY);
       if(fd != -1){dup2(fd,STDIN_FILENO); close(fd);}
       else perror("open");
     }
