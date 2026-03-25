@@ -133,7 +133,7 @@ int main() {
       else perror("open");
     }
     if(!file_err.empty()){
-      int flags = O_WRONLY | O_CREAT | (append_out ? O_APPEND : O_TRUNC);
+      int flags = O_WRONLY | O_CREAT | (append_err ? O_APPEND : O_TRUNC);
       int fd = open(file_err.c_str(), flags, 0644);
       if(fd != -1){dup2(fd,STDERR_FILENO); close(fd);}
       else perror("open");
