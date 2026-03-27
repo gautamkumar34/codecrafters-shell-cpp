@@ -78,20 +78,11 @@ vector<string>parse_s(string s){
     return args;
 }
 
-int main() {
-  // Flush after every std::cout / std:cerr
-  cout << std::unitbuf;
-  cerr << std::unitbuf;
-
-  while(true){
-    cout << "$ ";
-    string s;
-    if(!getline(cin,s))break;
-    
-    vector<string> raw_args = parse_s(s);
-
-    if(raw_args.empty())continue;
+void execute_command(vector<string> raw_args, bool is_forked){
+  if(raw_args.empty())return;
     vector<string>args;
+
+    // extract the Redirections < , > , >>, 2>.
     string file_in , file_out, file_err;
     bool append_out = false, append_err = false;
 
@@ -119,8 +110,13 @@ int main() {
         args.push_back(raw_args[i]);
       }
     }
-    if(args.empty())continue;
+    if(args.empty()){
+      if(is_forked)exit(0);
+      return;
+    }
     string cmd = args[0];
+
+    // Apply Redirection
 
     int saved_out= dup(STDOUT_FILENO);
     int saved_err = dup(STDERR_FILENO);
@@ -143,8 +139,12 @@ int main() {
       if(fd != -1){dup2(fd,STDIN_FILENO); close(fd);}
       else perror("open");
     }
+     // Built-ins and external command executions
 
-    if(cmd == "exit")break;
+    if(cmd == "exit"){
+      int code = (args.size()>1)? stoi(args[1]) :0;
+      exit(code);
+    }
     if(cmd=="type"){
       string task = args[1];                                     
       if(task=="type" || task=="echo" ||task=="exit" || task =="pwd" || task =="cd"){                 
@@ -195,29 +195,114 @@ int main() {
     else{
       string full_path = get_path(cmd) ;
       if(!full_path.empty()){
-        pid_t pid = fork();
-        if(pid ==0){
+        if(is_forked){
           vector<char*>c_args;
-          for(auto& a :args){
+          for(auto& a: args){
             c_args.push_back(&a[0]);
           }
           c_args.push_back(nullptr);
-          execv(full_path.c_str(), c_args.data());
+          execv(full_path.c_str(),c_args.data());
           perror("execv");
           exit(1);
         }
-        else {
-          waitpid(pid , nullptr,0);
+        else{
+          pid_t pid = fork();
+          if(pid ==0){
+            vector<char*>c_args;
+            for(auto& a :args){
+              c_args.push_back(&a[0]);
+            }
+            c_args.push_back(nullptr);
+            execv(full_path.c_str(), c_args.data());
+            perror("execv");
+            exit(1);
+          }
+          else {
+            waitpid(pid , nullptr,0);
+          }
         }
       }
       else{
         cout<<cmd<<": command not found"<<endl;
       }
     }
+
+    //Restore Descriptors
+
     dup2(saved_out, STDOUT_FILENO);
     dup2(saved_err, STDERR_FILENO);
     dup2(saved_in, STDIN_FILENO);
     close(saved_out); close(saved_err); close(saved_in);
+
+    if(is_forked)exit(0);
+}
+
+int main() {
+  // Flush after every std::cout / std:cerr
+  cout << std::unitbuf;
+  cerr << std::unitbuf;
+
+  while(true){
+    cout << "$ ";
+    string s;
+    if(!getline(cin,s))break;
+    
+    vector<string> raw_args = parse_s(s);
+    if(raw_args.empty())continue;
+
+    vector<vector<string>>commands;
+    vector<string>curr_cmd;
+
+    for(const string& token : raw_args ){
+      if(token == "|"){
+        commands.push_back(curr_cmd);
+        curr_cmd.clear();
+      }
+      else{
+        curr_cmd.push_back(token);
+      }
+    }
+    commands.push_back(curr_cmd);
+
+    if(commands.size()==1){// no piping
+      execute_command(commands[0],false);
+    }
+    else{
+      int prev_read_fd = -1;
+      vector<pid_t>children;
+      for(size_t i = 0; i<commands.size();i++){
+        int pipe_fd[2];
+        if(i<commands.size()-1){
+          pipe(pipe_fd);
+        }
+
+        pid_t pid = fork();
+        if(pid==0){
+          if(prev_read_fd != -1){
+            dup2(prev_read_fd,STDIN_FILENO);
+            close(prev_read_fd);
+          }
+          if(i < commands.size()-1){
+            dup2(pipe_fd[1],STDOUT_FILENO);
+            close(pipe_fd[0]);
+            close(pipe_fd[1]);
+          }
+          execute_command(commands[i],true);
+        }
+        else{
+          children.push_back(pid);
+          if(prev_read_fd != -1)close(prev_read_fd);
+          if(i < commands.size()-1){
+            close(pipe_fd[1]);
+            prev_read_fd= pipe_fd[0];
+          }
+        }
+      }
+      for(pid_t child_pid : children){
+        waitpid(child_pid,nullptr,0);
+      }
+    }
+    
   }
   return 0;
 
