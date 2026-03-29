@@ -175,6 +175,7 @@ string read_line_raw(){
   bool last_was_tab = false;
 
   while(read(STDIN_FILENO, &c , 1)==1){
+    if(c=='\r')continue;
     if(c == '\n'){
       cout<<"\n";
       break;
@@ -272,7 +273,7 @@ void execute_command(vector<string> raw_args, bool is_forked){
       }
     }
     if(args.empty()){
-      if(is_forked)exit(0);
+      if(is_forked)_exit(0);
       return;
     }
     string cmd = args[0];
@@ -364,7 +365,7 @@ void execute_command(vector<string> raw_args, bool is_forked){
           c_args.push_back(nullptr);
           execv(full_path.c_str(),c_args.data());
           perror("execv");
-          exit(1);
+          _exit(1);
         }
         else{
           pid_t pid = fork();
@@ -376,7 +377,7 @@ void execute_command(vector<string> raw_args, bool is_forked){
             c_args.push_back(nullptr);
             execv(full_path.c_str(), c_args.data());
             perror("execv");
-            exit(1);
+            _exit(1);
           }
           else {
             waitpid(pid , nullptr,0);
@@ -395,26 +396,19 @@ void execute_command(vector<string> raw_args, bool is_forked){
     dup2(saved_in, STDIN_FILENO);
     close(saved_out); close(saved_err); close(saved_in);
 
-    if(is_forked)exit(0);
+    if(is_forked)_exit(0);
 }
 
 int main() {
   // Flush after every std::cout / std:cerr
   cout << std::unitbuf;
   cerr << std::unitbuf;
-
-  bool is_tty = isatty(STDIN_FILENO);
-  if(is_tty)enableRawMode();
   
+  enableRawMode();
+
   while(true){
     cout << "$ ";
-    string s;
-    if(is_tty){
-      s = read_line_raw();
-    }
-    else{
-      if(!getline(cin, s)) break;
-    }
+    string s = read_line_raw();
     if(!s.empty() && s.back()=='\r')s.pop_back();
     
     vector<string> raw_args = parse_s(s);
@@ -445,7 +439,7 @@ int main() {
         if(i<commands.size()-1){
           pipe(pipe_fd);
         }
-
+        cout.flush();
         pid_t pid = fork();
         if(pid==0){
           if(prev_read_fd != -1){
