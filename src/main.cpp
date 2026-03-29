@@ -9,6 +9,9 @@
 #include <unistd.h>   // for access()
 #include <limits.h>  
 #include <fcntl.h>
+#include <termios.h>  // For raw mode
+#include <set>        // To keep completions unique and sorted
+#include <algorithm>  // For sorting
 
 using namespace std;
 
@@ -76,6 +79,164 @@ vector<string>parse_s(string s){
     }
     
     return args;
+}
+
+string longest_common_prefix(const vector<string>& strs){
+  if(strs.empty())return "";
+  string prefix = strs[0];
+  for(size_t i = 0;i<strs.size();i++){
+    while(strs[i].find(prefix)!=0){
+      prefix = prefix.substr(0,prefix.length()-1);
+      if(prefix.empty())return "";
+    }
+  }
+  return prefix;
+}
+
+vector<string> command_completion(const string& prefix){
+  set<string>matches;
+  vector<string>buitins = {"cd", "echo","exit","pwd","type"};
+  for(auto& b: buitins){
+    if(b.find(prefix)==0)matches.insert(b);
+  }
+
+  const char* path_env = getenv("PATH");
+  if(path_env){
+    stringstream ss(path_env);
+    string dir;
+    while(getline(ss,dir,';')){
+      if(dir.empty())continue;
+      DIR* dp = opendir(dir.c_str());
+      if(dp){
+        struct dirent* ep;
+        while((ep=readdir(dp)) != nullptr){
+          string name = ep->d_name;
+          if(name == "." || name == "..")continue;
+          if(name.find(prefix)==0){
+            matches.insert(name);
+          }
+        }
+        closedir(dp);
+      }
+    }
+  }
+  return vector<string>(matches.begin(),matches.end());
+}
+
+vector<string> file_completion(const string& prefix ){
+  set<string>matches;
+  string dir_path= ".";
+  string file_prefix = prefix;
+
+  size_t last_slash = prefix.find_last_of('/');
+  if(last_slash != string::npos){
+    dir_path= prefix.substr(0, last_slash+1);
+    file_prefix = prefix.substr(last_slash+1);
+    if(dir_path.empty())dir_path = "/";
+  }
+
+  DIR* dp = opendir(dir_path.c_str());
+  if(dp){
+    struct dirent* ep;
+    while((ep= readdir(dp)) != nullptr){
+      string name = ep->d_name;
+      if(name == "." || name == "..")continue;
+      if(name.find(file_prefix)==0){
+        matches.insert(name);
+      }
+    }
+    closedir(dp);
+  }
+  vector<string> results;
+  for(auto& m : matches){
+    if(last_slash != string::npos)results.push_back(dir_path+m);
+    else results.push_back(m);
+  }
+  return results;
+}
+
+struct termios orig_terminos;
+
+void disableRawMode(){
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_terminos);
+}
+
+void enableRawMode(){
+  tcgetattr(STDIN_FILENO, &orig_terminos);
+  atexit(disableRawMode);
+  struct termios raw = orig_terminos;
+  raw.c_lflag &= ~(ECHO | ICANON);
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+string read_line_raw(){
+  string input;
+  char c;
+  bool last_was_tab = false;
+
+  while(read(STDIN_FILENO, &c , 1)==1){
+    if(c == '\n'){
+      cout<<"\n";
+      break;
+    }
+    else if(c==4){
+      if(input.empty())exit(0);
+    }
+    else if(c == 127 || c == '\b'){
+      if(!input.empty()){
+        input.pop_back();
+        cout<<"\b\b";
+      }
+      last_was_tab = false;
+    }
+    else if(c == '\t'){
+      size_t last_space = input.find_last_of(' ');
+      bool is_cmd = (last_space == string::npos);
+      string prefix = is_cmd ? input : input.substr(last_space +1);
+
+      vector<string> matches = is_cmd ? command_completion(prefix) : file_completion(prefix);
+      if(matches.empty()){
+        cout<<"\a";
+      }
+      else if(matches.size()==1){
+        string match = matches[0];
+        string to_add = match.substr(prefix.length()) + " ";
+        input += to_add;
+        cout<<to_add;
+        last_was_tab = false;
+      }
+      else{
+        string lcp = longest_common_prefix(matches);
+        if(lcp.length()> prefix.length()){
+          string to_add = lcp.substr(prefix.length());
+          input += to_add;
+          cout<<to_add;
+          last_was_tab = false;
+        }
+        else{
+          if(last_was_tab){
+            cout<<"\n";
+            for(size_t i=0;i<matches.size();i++){
+              cout<<matches[i]<<" ";
+            }
+            cout<<"\n$"<<input;
+            last_was_tab = false;
+          }
+          else{
+            cout<<"\a";
+            last_was_tab = true;
+          }
+        }
+      }
+      if(c =='\t')continue;
+    }
+    else{
+      input += c;
+      cout<<c;
+      last_was_tab = false;
+    }
+  }
+  return input;
 }
 
 void execute_command(vector<string> raw_args, bool is_forked){
@@ -242,10 +403,12 @@ int main() {
   cout << std::unitbuf;
   cerr << std::unitbuf;
 
+  enableRawMode();
+
   while(true){
     cout << "$ ";
-    string s;
-    if(!getline(cin,s))break;
+    string s = read_line_raw();
+    if(!s.empty() && s.back()=='\r')s.pop_back();
     
     vector<string> raw_args = parse_s(s);
     if(raw_args.empty())continue;
