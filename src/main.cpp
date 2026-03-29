@@ -142,6 +142,13 @@ vector<string> file_completion(const string& prefix ){
       string name = ep->d_name;
       if(name == "." || name == "..")continue;
       if(name.find(file_prefix)==0){
+        string path_to_stat = (dir_path== "." ? name : dir_path +name);
+        struct stat statbuff;
+        if(stat(path_to_stat.c_str(), &statbuff)==0){
+          if(S_ISDIR(statbuff.st_mode)){
+            name += "/";
+          }
+        }
         matches.insert(name);
       }
     }
@@ -202,6 +209,9 @@ string read_line_raw(){
       else if(matches.size()==1){
         string match = matches[0];
         string to_add = match.substr(prefix.length()) + " ";
+        if(is_cmd || match.back() != '/'){
+          to_add += " ";
+        }
         input += to_add;
         cout<<to_add;
         last_was_tab = false;
