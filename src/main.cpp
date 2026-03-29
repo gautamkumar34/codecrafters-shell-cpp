@@ -222,7 +222,7 @@ string read_line_raw(){
       }
       else if(matches.size()==1){
         string match = matches[0];
-        string to_add = match.substr(prefix.length()) + " ";
+        string to_add = match.substr(prefix.length());
         if(!match.empty() && match.back() != '/'){
           to_add += " ";
         }
