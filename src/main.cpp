@@ -219,7 +219,7 @@ string read_line_raw(){
             for(size_t i=0;i<matches.size();i++){
               cout<<matches[i]<<" ";
             }
-            cout<<"\n$"<<input;
+            cout<<"\n$ "<<input;
             last_was_tab = false;
           }
           else{
@@ -403,11 +403,18 @@ int main() {
   cout << std::unitbuf;
   cerr << std::unitbuf;
 
-  enableRawMode();
-
+  bool is_tty = isatty(STDIN_FILENO);
+  if(is_tty)enableRawMode();
+  
   while(true){
     cout << "$ ";
-    string s = read_line_raw();
+    string s;
+    if(is_tty){
+      s = read_line_raw();
+    }
+    else{
+      if(!getline(cin, s)) break;
+    }
     if(!s.empty() && s.back()=='\r')s.pop_back();
     
     vector<string> raw_args = parse_s(s);
@@ -451,6 +458,7 @@ int main() {
             close(pipe_fd[1]);
           }
           execute_command(commands[i],true);
+          exit(0);
         }
         else{
           children.push_back(pid);
