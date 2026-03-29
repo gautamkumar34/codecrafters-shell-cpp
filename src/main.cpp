@@ -193,7 +193,7 @@ string read_line_raw(){
     else if(c == 127 || c == '\b'){
       if(!input.empty()){
         input.pop_back();
-        cout<<"\b\b";
+        cout<<"\b \b";
       }
       last_was_tab = false;
     }
@@ -209,9 +209,9 @@ string read_line_raw(){
       else if(matches.size()==1){
         string match = matches[0];
         string to_add = match.substr(prefix.length()) + " ";
-        // if(is_cmd || match.back() != '/'){
-        //   to_add += " ";
-        // }
+        if(is_cmd || match.back() != '/'){
+          to_add += " ";
+        }
         input += to_add;
         cout<<to_add;
         last_was_tab = false;
