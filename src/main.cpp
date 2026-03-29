@@ -142,26 +142,12 @@ vector<string> file_completion(const string& prefix ){
       string name = ep->d_name;
       if(name == "." || name == "..")continue;
       if(name.find(file_prefix)==0){
-        bool is_dir = false;
-        if(ep->d_type== DT_DIR)is_dir = true;
-        else if(ep->d_type == DT_UNKNOWN || ep->d_type == DT_LNK){
-          string path_to_stat = dir_path;
-          if(path_to_stat != "./" && path_to_stat != "." && path_to_stat.back() != '/'){
-            path_to_stat += "/";
+        string path_to_stat = (dir_path== "." ? name : dir_path +name);
+        struct stat statbuff;
+        if(stat(path_to_stat.c_str(), &statbuff)==0){
+          if(S_ISDIR(statbuff.st_mode)){
+            name += "/";
           }
-          if(path_to_stat == ".")path_to_stat = "";
-          path_to_stat += name;
-
-          struct stat statbuf;
-          if(stat(path_to_stat.c_str(), &statbuf) == 0){
-            if(S_ISDIR(statbuf.st_mode)){
-              is_dir = true;
-            }
-          }
-        }
-
-        if(is_dir){
-          name += "/";
         }
         matches.insert(name);
       }
@@ -222,7 +208,7 @@ string read_line_raw(){
       }
       else if(matches.size()==1){
         string match = matches[0];
-        string to_add = match.substr(prefix.length());
+        string to_add = match.substr(prefix.length()) + " ";
         if(!match.empty() && match.back() != '/'){
           to_add += " ";
         }
