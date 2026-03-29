@@ -104,7 +104,7 @@ vector<string> command_completion(const string& prefix){
   if(path_env){
     stringstream ss(path_env);
     string dir;
-    while(getline(ss,dir,';')){
+    while(getline(ss,dir,':')){
       if(dir.empty())continue;
       DIR* dp = opendir(dir.c_str());
       if(dp){
