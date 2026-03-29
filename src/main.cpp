@@ -209,7 +209,7 @@ string read_line_raw(){
       else if(matches.size()==1){
         string match = matches[0];
         string to_add = match.substr(prefix.length()) + " ";
-        if(is_cmd || match.back() != '/'){
+        if(match.back() != '/'){
           to_add += " ";
         }
         input += to_add;
